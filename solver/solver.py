@@ -1,5 +1,4 @@
 from heapq import *
-from copy import deepcopy
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -13,6 +12,12 @@ class Node:
         self.parent = parent
         self.state = state
         self.operator = operator
+
+    def copy(self):
+        state = {}
+        for a in self.state:
+            state[a] = self.state[a]
+        return state
 
     def __lt__(self, other):
         return 1
@@ -39,23 +44,22 @@ def create_road(node):
 
 
 def A_star(initial_state, final_state, dim):
+    result = []
+    initial_state = [int(a) for a in initial_state.split(',')]
     open_queue = []
     open_set = set()
     closed_set = set()
     distance = {}
-    initial_state = [int(a) for a in initial_state.split(',')]
     init_state = {}
     for a in initial_state:
         if a not in init_state:
             init_state[a] = 1
         else:
             init_state[a] += 1
-    initial_state = init_state
-
-    open_queue.append((heuristic(initial_state, final_state, dim), Node(initial_state, None, None)))
-    open_set.add(str(initial_state))
-    distance[str(initial_state)] = 0
-    result = []
+    initial_state_string = str([(int(k), int(init_state[k])) for k in sorted(init_state)])
+    open_queue.append((heuristic(init_state, final_state, dim), Node(init_state, None, None)))
+    open_set.add(initial_state_string)
+    distance[initial_state_string] = 0
     while len(open_queue) > 0:
         curr_hvalue, curr_node = heappop(open_queue)
         if(len(closed_set) > 500000):
@@ -63,7 +67,7 @@ def A_star(initial_state, final_state, dim):
         if curr_node.state == final_state:
             result = create_road(curr_node)
             break
-        curr_state_string = str(curr_node.state)
+        curr_state_string = str([(int(k), int(curr_node.state[k])) for k in sorted(curr_node.state)])
         if curr_state_string in closed_set:
             continue
         open_set.remove(curr_state_string)
@@ -75,7 +79,7 @@ def A_star(initial_state, final_state, dim):
                     continue
                 if (key + key1) % 2 != 0:
                     continue
-                new_state = deepcopy(curr_node.state)
+                new_state = curr_node.copy()
                 new_state[key] -= 1
                 new_state[key1] -= 1
                 if new_state[key] == 0:
@@ -88,7 +92,7 @@ def A_star(initial_state, final_state, dim):
                 else:
                     new_state[(key + key1) / 2] += 2
 
-                new_state_string = str(new_state)
+                new_state_string = str([(int(k), int(new_state[k])) for k in sorted(new_state)])
 
                 if new_state_string in closed_set:
                     continue
